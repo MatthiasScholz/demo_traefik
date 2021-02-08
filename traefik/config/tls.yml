@@ -1,0 +1,6 @@
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: /certs/proxy.pem
+        keyFile: /certs/proxy-key.pem

@@ -1,0 +1,54 @@
+version: '3'
+
+services:
+  reverse-proxy:
+    # The official v2 Traefik docker image
+    build: ./traefik
+    restart: unless-stopped
+    networks:
+      - traefik_webgateway
+    # Enables the web UI and tells Traefik to listen to docker
+    environment:
+      - TRAEFIK_LOG_LEVEL=ERROR
+      - TRAEFIK_API=true
+      - TRAEFIK_API_DASHBOARD=true
+      - TRAEFIK_API_INSECURE=true
+      - TRAEFIK_ENTRYPOINTS_websecure=true
+      - TRAEFIK_ENTRYPOINTS_websecure_ADDRESS=:443
+      - TRAEFIK_ENTRYPOINTS_traefik=true
+      - TRAEFIK_ENTRYPOINTS_traefik_ADDRESS=:8080
+      - TRAEFIK_PROVIDERS_DOCKER=true
+      - TRAEFIK_PROVIDERS_FILE_DIRECTORY=/etc/traefik
+      - TRAEFIK_METRICS_PROMETHEUS=true
+    ports:
+      - 4443:443
+      # The Web UI (enabled by --api.insecure=true)
+      - 8080:8080
+    volumes:
+      # So that Traefik can listen to the Docker events
+      - /var/run/docker.sock:/var/run/docker.sock
+  backend:
+    image: hashicorp/http-echo:latest
+    command: -listen=:80 -text=backend
+    restart: unless-stopped
+    networks:
+      - traefik_webgateway
+    ports:
+      - 5678:80
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.backend.entrypoints=websecure
+      - traefik.http.routers.backend.tls=true
+      - traefik.http.routers.backend.rule=PathPrefix("/api")
+      - traefik.http.services.backend.loadBalancer.healthCheck.path=/health
+      - traefik.http.services.backend.loadBalancer.healthCheck.interval=0s
+      - traefik.http.middlewares.backendheader.headers.accesscontrolallowheaders=accept,content-type,content-length,accept-encoding,x-csrf-token,authorization
+      - traefik.http.middlewares.backendheader.headers.accesscontrolallowmethods=GET,OPTIONS,PUT,POST
+      - traefik.http.middlewares.backendheader.headers.accesscontrolalloworigin=*
+      - traefik.http.middlewares.backendheader.headers.accesscontrolmaxage=100
+      - traefik.http.middlewares.backendheader.headers.addvaryheader=true
+      - traefik.http.routers.backend.middlewares=backendheader
+
+networks:
+  traefik_webgateway:
+    external: false

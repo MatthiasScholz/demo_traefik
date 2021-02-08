@@ -1,0 +1,11 @@
+file:
+  /path/to/domain.cert:
+    exists: true
+    contains:
+      - BEGIN CERTIFICATE
+      - END CERTIFICATE
+  /path/to/domain.key:
+    exists: true
+    contains:
+      - BEGIN RSA PRIVATE KEY
+      - END RSA PRIVATE KEY
